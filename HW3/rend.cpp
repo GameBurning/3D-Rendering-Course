@@ -214,11 +214,12 @@ int GzBeginRender(GzRender *render)
 	//init frame buffer color
 	GzInitDisplay(render->display);
 
+	//compute Xiw
+	setupXiw(render);
+
 	//compute xpi
 	setupXpi(render);
 
-	//compute Xiw
-	setupXiw(render);
 
 
 	GzPushMatrix(render, render->Xsp);
@@ -370,7 +371,7 @@ int setupXsp(GzRender *render)
 int setupXpi(GzRender *render)
 {
 	float rad = (render->camera.FOV / 2.0) * (PI / 180.0);
-	float d = 1 / (tan(rad / 2));
+
 	render->camera.Xpi[0][0] = 1;
 	render->camera.Xpi[0][1] = 0;
 	render->camera.Xpi[0][2] = 0;
@@ -384,112 +385,43 @@ int setupXpi(GzRender *render)
 	render->camera.Xpi[2][0] = 0;
 	render->camera.Xpi[2][1] = 0;
 	//ToDo Check
-	render->camera.Xpi[2][2] = 1/d;
+	render->camera.Xpi[2][2] = tan(rad);
 	render->camera.Xpi[2][3] = 0;
 
 	render->camera.Xpi[3][0] = 0;
 	render->camera.Xpi[3][1] = 0;
-	render->camera.Xpi[3][2] = 1/d;
-	render->camera.Xpi[3][1] = 1;
+	render->camera.Xpi[3][2] = tan(rad);
+	render->camera.Xpi[3][3] = 1;
 
 	return GZ_SUCCESS;
 }
 
 
-
-Vertex normalize(const Vertex& v)
-{
-	float sum = v.x * v.x + v.y * v.y + v.z * v.z;
-	float absoluteValue = sqrt(sum);
-	Vertex vector;
-	vector.x = v.x / absoluteValue;
-	vector.y = v.y / absoluteValue;
-	vector.z = v.z / absoluteValue;
-	return vector;
-}
-
-float dotProduct(const Vertex& a, const Vertex& b)
-{
-	float dp = a.x * b.x + a.y * b.y + a.z * b.z;
-	return dp;
-}
-
-Vertex crossProduct(const Vertex& a, const Vertex& b)
-{
-	Vertex c;
-	c.x = a.y * b.z - a.z * b.y;
-	c.y = a.z * b.x - a.x * b.z;
-	c.z = a.x * b.y - a.y * b.x;
-	return c;
-}
-
 int setupXiw(GzRender *render)
 {
-	//Vertex cl;
-	//Vertex cz;//Z
-	//float dp;
-	//Vertex up;
-	//Vertex cUp;
-	//Vertex cy;//Y
-	//Vertex cx;//X
-	//Vertex camera;//camera
-	//			  //camera Z-axis
-	//cl.x = render->camera.lookat[0] - render->camera.position[0];
-	//cl.y = render->camera.lookat[1] - render->camera.position[1];
-	//cl.z = render->camera.lookat[2] - render->camera.position[2];
-	//normalize(cl);
-
-	////up vector 
-	//up.x = render->camera.worldup[0];
-	//up.y = render->camera.worldup[1];
-	//up.z = render->camera.worldup[2];
-	//dp = dotProduct(up, cz);
-	////camera Y-axis
-	//cUp.x = up.x - dp * cz.x;
-	//cUp.y = up.y - dp * cz.y;
-	//cUp.z = up.z - dp * cz.z;
-	//cy = normalize(cUp);
-	////camera X-axis
-	//cx = crossProduct(cy, cz);
-	////camera location
-	//camera.x = render->camera.position[0];
-	//camera.y = render->camera.position[1];
-	//camera.z = render->camera.position[2];
-
-	//render->camera.Xiw[0][0] = cx.x;
-	//render->camera.Xiw[0][1] = cx.y;
-	//render->camera.Xiw[0][2] = cx.z;
-	//render->camera.Xiw[0][3] = -dotProduct(cx, camera);
-
-	//render->camera.Xiw[1][0] = cy.x;
-	//render->camera.Xiw[1][1] = cy.y;
-	//render->camera.Xiw[1][2] = cy.z;
-	//render->camera.Xiw[1][3] = -dotProduct(cy, camera);
-
-	//render->camera.Xiw[2][0] = cz.x;
-	//render->camera.Xiw[2][1] = cz.y;
-	//render->camera.Xiw[2][2] = cz.z;
-	//render->camera.Xiw[2][3] = -dotProduct(cz, camera);
-
-	//render->camera.Xiw[3][0] = 0;
-	//render->camera.Xiw[3][1] = 0;
-	//render->camera.Xiw[3][2] = 0;
-	//render->camera.Xiw[3][3] = 1;
-
-	//return GZ_SUCCESS;
-
-	GzCoord camX, camY, camZ;
-	camZ[X] = render->camera.lookat[X] - render->camera.position[X];
-	camZ[Y] = render->camera.lookat[Y] - render->camera.position[Y];
-	camZ[Z] = render->camera.lookat[Z] - render->camera.position[Z];
+	GzCoord cl, camZ;
+	cl[X] = render->camera.lookat[X] - render->camera.position[X];
+	cl[Y] = render->camera.lookat[Y] - render->camera.position[Y];
+	cl[Z] = render->camera.lookat[Z] - render->camera.position[Z];
+	normalized(cl);
+	camZ[X] = cl[X];
+	camZ[Y] = cl[Y];
+	camZ[Z] = cl[Z];
 	normalized(camZ);
 
-	float up = render->camera.worldup[X] * camZ[X] + render->camera.worldup[Y] * camZ[Y] + render->camera.worldup[Z] * camZ[Z];
-	camY[X] = render->camera.worldup[X] - up*camZ[X];
-	camY[Y] = render->camera.worldup[Y] - up*camZ[Y];
-	camY[Z] = render->camera.worldup[Z] - up*camZ[Z];
+	GzCoord camUp, camY;
+	float upDotZ = render->camera.worldup[X] * camZ[X] + render->camera.worldup[Y] * camZ[Y] +
+		render->camera.worldup[Z] * camZ[Z];
+	camUp[X] = render->camera.worldup[X] - upDotZ*camZ[X];
+	camUp[Y] = render->camera.worldup[Y] - upDotZ*camZ[Y];
+	camUp[Z] = render->camera.worldup[Z] - upDotZ*camZ[Z];
+	normalized(camUp);
+	camY[X] = camUp[X];
+	camY[Y] = camUp[Y];
+	camY[Z] = camUp[Z];
 	normalized(camY);
 
+	GzCoord camX;
 	camX[X] = camY[Y] * camZ[Z] - camY[Z] * camZ[Y];
 	camX[Y] = camY[Z] * camZ[X] - camY[X] * camZ[Z];
 	camX[Z] = camY[X] * camZ[Y] - camY[Y] * camZ[X];
@@ -544,7 +476,7 @@ int initCamera(GzRender *render)
 }
 
 int normalized(GzCoord vector) {
-	float length = sqrt(vector[X] * vector[X] + vector[X] * vector[X] + vector[X] * vector[X]);
+	float length = sqrt(vector[X] * vector[X] + vector[Y] * vector[Y] + vector[Z] * vector[Z]);
 	vector[X] /= length;
 	vector[Y] /= length;
 	vector[Z] /= length;
