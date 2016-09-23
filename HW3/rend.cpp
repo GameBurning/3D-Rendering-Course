@@ -173,7 +173,7 @@ int GzScaleMat(GzCoord scale, GzMatrix mat)
 //----------------------------------------------------------
 // Begin main functions
 
-int GzNewRender(GzRender **render, GzDisplay	*display)
+int GzNewRender(GzRender **render, GzDisplay *display)
 {
 /*  
 - malloc a renderer struct 
@@ -190,7 +190,6 @@ int GzNewRender(GzRender **render, GzDisplay	*display)
 	setupXsp(*render);
 	initCamera(*render);
 	return GZ_SUCCESS;
-
 }
 
 int GzFreeRender(GzRender *render)
@@ -212,7 +211,14 @@ int GzBeginRender(GzRender *render)
 */ 
 
 	//init frame buffer color
-	GzInitDisplay(render->display);
+	for (int i = 0; i < render->display->xres * render->display->yres; i++)
+	{
+		render->display->fbuf[i].alpha = 1;
+		render->display->fbuf[i].blue = 100;
+		render->display->fbuf[i].green = 100;
+		render->display->fbuf[i].red = 100;
+		render->display->fbuf[i].z = MAXINT;
+	}
 
 	//compute Xiw
 	setupXiw(render);
