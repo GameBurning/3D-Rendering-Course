@@ -263,6 +263,10 @@ int GzPushMatrix(GzRender *render, GzMatrix	matrix)
 	if (render->matlevel >= MATLEVELS)
 		return GZ_FAILURE;
 
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 4; j++)
+			render->Ximage[render->matlevel][i][j] = 0;
+
 	if (render->matlevel == 0)
 		for (int i = 0; i < 4; i++)
 			for (int j = 0; j < 4; j++)
@@ -607,6 +611,10 @@ void ToScreen(const GzCoord* vert_world, GzMatrix Xsw, GzCoord* vert_screen)
 	float tri_world[4][3];
 	float tri_screen[4][3];
 
+	for (int i = 0; i < 4; i++)
+		for (int j = 0; j < 3; j++)
+			tri_screen[i][j] = 0;
+
 	for (int i = 0; i < 3; i++)
 	{
 		tri_world[X][i] = vert_world[i][X];
@@ -618,7 +626,7 @@ void ToScreen(const GzCoord* vert_world, GzMatrix Xsw, GzCoord* vert_screen)
 	for (int i = 0; i < 4; i++)
 		for (int j = 0; j < 3; j++)
 			for (int m = 0; m < 4; m++)
-				tri_screen[i][j] += Xsw[i][m] * vert_world[m][i];
+				tri_screen[i][j] += Xsw[i][m] * tri_world[m][j];
 
 	for (int i = 0; i < 3; i++)
 	{
