@@ -334,7 +334,17 @@ int GzPutTriangle(GzRender	*render, int numParts, GzToken *nameList, GzPointer	*
 			ToScreen(vertices_model, render->Ximage[render->matlevel - 1], vertices_screen);
 		}
 	}
-	if (*vertices_screen[Z] > render->camera.position[Z]) {
+
+	bool inScreen = FALSE;
+	for (int i = 0; i < 3; i++) {
+		if (vertices_screen[i][X] >= 0 && vertices_screen[i][X] < render->display->xres &&
+			vertices_screen[i][Y] >= 0 && vertices_screen[i][Y] < render->display->yres) {
+			inScreen = TRUE;
+			break;
+		}
+	}
+
+	if (vertices_screen[0][Z] > 0 && vertices_screen[1][Z] > 0 && vertices_screen[2][Z] > 0 && inScreen) {
 		SetupTri(vertices_screen);
 		LEE(render, vertices_screen);
 	}
