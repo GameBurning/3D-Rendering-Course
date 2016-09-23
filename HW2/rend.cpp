@@ -165,18 +165,6 @@ void LEE(GzRender* render, GzCoord* vertices) {
 		E20Right = false;
 	}
 
-	/*else if (vertices[1][Y] < vertices[2][Y])
-	{
-	E01Right = true;
-	E12Right = true;
-	E20Right = false;
-	}
-	else {
-	E01Right = true;
-	E12Right = false;
-	E20Right = false;
-	}*/
-
 	//Calculate Z Plane for interpolation
 	float A, B, C, D;
 	GetZPlane(vertices, &A, &B, &C, &D);

@@ -66,3 +66,32 @@ int GzRotYMat(float degree, GzMatrix mat);
 int GzRotZMat(float degree, GzMatrix mat);
 int GzTrxMat(GzCoord translate, GzMatrix mat);
 int GzScaleMat(GzCoord scale, GzMatrix mat);
+
+//define a Vertex class that including x, y, and z
+#ifndef VERTEX
+#define VERTEX
+class Vertex
+{
+public:
+	float x;
+	float y;
+	float z;
+
+	Vertex() {};
+	Vertex(const GzCoord& vertex)
+	{
+		x = vertex[0];
+		y = vertex[1];
+		z = vertex[2];
+	}
+
+	static bool SortByY(const Vertex& v1, const Vertex& v2)
+	{
+		if (v1.y == v2.y)
+		{
+			return v1.x < v2.x;
+		}
+		return v1.y < v2.y;
+	}
+};
+#endif
