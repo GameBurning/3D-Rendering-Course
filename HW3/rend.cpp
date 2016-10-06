@@ -36,11 +36,11 @@ int GzRotXMat(float degree, GzMatrix mat)
 
 	mat[1][0] = 0;
 	mat[1][1] = cos(rad);
-	mat[1][2] = sin(rad);
+	mat[1][2] = -sin(rad);
 	mat[1][3] = 0;
 
 	mat[2][0] = 0;
-	mat[2][1] = -sin(rad);
+	mat[2][1] = sin(rad);
 	mat[2][2] = cos(rad);
 	mat[2][3] = 0;
 

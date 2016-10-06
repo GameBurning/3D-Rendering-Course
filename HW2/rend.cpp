@@ -144,10 +144,12 @@ void LEE(GzRender* render, GzCoord* vertices) {
 	int Down = ceil(vertices[1][Y] > vertices[2][Y] ? vertices[1][Y] : vertices[2][Y]);
 	int Left = floor(min(min(vertices[0][X], vertices[1][X]), vertices[2][X]));
 	int Right = ceil(max(max(vertices[0][X], vertices[1][X]), vertices[2][X]));
+    
 	//Determine the right edge
 	bool E01Right;
 	bool E12Right;
 	bool E20Right;
+    
 	//Get Display Parameter
 	GzIntensity red, green, blue, alpha;
 	GzDepth fbZ;
