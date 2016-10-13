@@ -45,6 +45,12 @@
     <ClCompile Include="TranslateDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="disp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rend.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="CS580HW.rc">
@@ -86,6 +92,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TranslateDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="disp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rend.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

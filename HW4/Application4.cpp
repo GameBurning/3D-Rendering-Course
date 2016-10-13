@@ -161,7 +161,8 @@ GzMatrix	rotateY =
 	* Select either GZ_COLOR or GZ_NORMALS as interpolation mode  
 	*/
         nameListShader[1]  = GZ_INTERPOLATE;
-#if 0
+#if 1
+		//interpStyle = GZ_FLAT;
         interpStyle = GZ_COLOR;         /* Gouraud shading */
 #else 
         interpStyle = GZ_NORMALS;       /* Phong shading */
@@ -210,8 +211,8 @@ int Application4::Render()
 	/* 
 	* Tokens associated with triangle vertex values 
 	*/ 
-	nameListTriangle[0] = GZ_POSITION; 
-	nameListTriangle[1] = GZ_NORMAL; 
+	nameListTriangle[0] = GZ_POSITION;
+	nameListTriangle[1] = GZ_NORMAL;
 	 
 	// I/O File open
 	FILE *infile;
@@ -266,9 +267,9 @@ int Application4::Render()
 	     * triangle, then feed it to the renderer 
 	     * NOTE: this sequence matches the nameList token sequence
 	     */ 
-	     	valueListTriangle[0] = (GzPointer)vertexList; 
+	    valueListTriangle[0] = (GzPointer)vertexList; 
 		valueListTriangle[1] = (GzPointer)normalList; 
-	     	GzPutTriangle(m_pRender, 2, nameListTriangle, valueListTriangle); 
+	    GzPutTriangle(m_pRender, 2, nameListTriangle, valueListTriangle); 
 	} 
 
 	GzFlushDisplay2File(outfile, m_pDisplay); 	/* write out or update display to file*/
@@ -329,5 +330,3 @@ void shade(GzCoord norm, GzCoord color)
   color[1] = coef*0.65f;
   color[2] = coef*0.88f;
 }
-
-

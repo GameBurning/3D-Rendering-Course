@@ -59,3 +59,18 @@ int GzRotYMat(float degree, GzMatrix mat);
 int GzRotZMat(float degree, GzMatrix mat);
 int GzTrxMat(GzCoord translate, GzMatrix mat);
 int GzScaleMat(GzCoord scale, GzMatrix mat);
+
+//Added Functions
+int setupXsp(GzRender *render);
+int setupXpi(GzRender *render);
+int setupXiw(GzRender *render);
+int initCamera(GzRender *render);
+int normalized(GzCoord vector);
+void SetupTri(GzCoord* vertices);
+void SwapCoord(float* v1, float* v2);
+void LEE(GzRender* render, GzCoord* vertices);
+void GetZPlane(const GzCoord* vertices, float* A, float* B, float* C, float* D);
+float EdgeSide(const float* start, const float* end, int x, int y, bool right);
+void ToScreen(const GzCoord* vert_world, GzMatrix Xsw, GzCoord* vert_screen);
+short ctoi(float color);
+

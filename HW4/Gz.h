@@ -18,7 +18,7 @@
 
 #define GZ_RGB_COLOR     99		/* renderer-state pixel color */
 
-#define GZ_INTERPOLATE		95	/* interpolation mode */
+#define GZ_INTERPOLATE		95	 /* interpolation mode */
 
 #define GZ_DIRECTIONAL_LIGHT	79	/* directional light */
 #define GZ_AMBIENT_LIGHT		78	/* ambient light type */
