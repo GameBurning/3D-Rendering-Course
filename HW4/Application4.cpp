@@ -161,7 +161,7 @@ GzMatrix	rotateY =
 	* Select either GZ_COLOR or GZ_NORMALS as interpolation mode  
 	*/
         nameListShader[1]  = GZ_INTERPOLATE;
-#if 1
+#if 0
 		//interpStyle = GZ_FLAT;
         interpStyle = GZ_COLOR;         /* Gouraud shading */
 #else 
@@ -203,7 +203,6 @@ int Application4::Render()
 	GzColor		color; 
 	char		dummy[256]; 
 	int		status; 
-
 
 	/* Initialize Display */
 	status |= GzInitDisplay(m_pDisplay); 
@@ -251,7 +250,7 @@ int Application4::Render()
 		&(vertexList[2][2]), 
 		&(normalList[2][0]), &(normalList[2][1]), 	
 		&(normalList[2][2]), 
-		&(uvList[2][0]), &(uvList[2][1]) ); 
+		&(uvList[2][0]), &(uvList[2][1])); 
 
 	    /* 
 	    * Set up shading attributes for each triangle 
