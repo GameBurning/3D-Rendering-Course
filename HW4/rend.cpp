@@ -12,7 +12,7 @@ int setupXpi(GzRender *render);
 int setupXiw(GzRender *render);
 int initCamera(GzRender *render);
 int normalized(GzCoord vector);
-void SetupTri(GzCoord* vertices);
+void SetupTri(GzCoord* vertices, GzCoord* normals);
 void SwapCoord(float* v1, float* v2);
 
 void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals); //Hw4: add normals
@@ -21,8 +21,8 @@ float EdgeSide(const float* start, const float* end, int x, int y, bool right);
 void ToScreen(const GzCoord* vert_world, GzMatrix Xsw, GzCoord* vert_screen);
 void NormalToScreen(const GzCoord* normal_world, GzMatrix Xsw, GzCoord* normal_screen);
 short ctoi(float color);
-float GzTriangleArea(GzCoord v0, GzCoord v1, GzCoord v2);
-int GzShadingEquation(GzRender *render, GzColor color, GzCoord norm);
+float triangleArea(GzCoord v0, GzCoord v1, GzCoord v2);
+int CalculateColor(GzRender *render, GzColor color, GzCoord norm);
 
 int GzRotXMat(float degree, GzMatrix mat)
 {
@@ -306,11 +306,13 @@ int GzPushMatrix(GzRender *render, GzMatrix	matrix)
 		render->Xnorm[render->matlevel][2][2] = 1;
 		render->Xnorm[render->matlevel][3][3] = 1;
 	}
+
 	else {
 		for (int i = 0; i < 4; i++)
 			for (int j = 0; j < 4; j++)
 				for (int m = 0; m < 4; m++)
 					render->Ximage[render->matlevel][i][j] += render->Ximage[render->matlevel - 1][i][m] * matrix[m][j];
+
 		if (render->matlevel == 1)
 		{
 			for (int i = 0; i < 4; i++)
@@ -344,7 +346,7 @@ int GzPushMatrix(GzRender *render, GzMatrix	matrix)
 			for (int i = 0; i < 4; i++)
 				for (int j = 0; j < 4; j++)
 					for (int m = 0; m < 4; m++)
-						render->Xnorm[render->matlevel][i][j] += render->Xnorm[render->matlevel-1][i][m] * matrix[m][j];
+						render->Xnorm[render->matlevel][i][j] += render->Xnorm[render->matlevel-1][i][m] * R[m][j];
 		}
 
 	}
@@ -480,7 +482,7 @@ int GzPutTriangle(GzRender	*render, int numParts, GzToken *nameList, GzPointer *
 	}
 
 	if (vertices_screen[0][Z] > 0 && vertices_screen[1][Z] > 0 && vertices_screen[2][Z] > 0 && inScreen) {
-		SetupTri(vertices_screen);
+		SetupTri(vertices_screen, vertices_normal);
 		LEE(render, vertices_screen, vertices_normal);
 	}
 
@@ -633,29 +635,34 @@ int normalized(GzCoord vector) {
 }
 
 //Make CW edges always 0-1,1-2,2-0
-void SetupTri(GzCoord* vertices) {
+void SetupTri(GzCoord* vertices, GzCoord* normals) {
 	//Determine Top/Bot relationship
 	for (int i = 2; i > 0; i--) {
 		if (vertices[i][Y] < vertices[i - 1][Y]) {
 			SwapCoord(vertices[i], vertices[i - 1]);
+			SwapCoord(normals[i], normals[i - 1]);
 		}
 	}
 	if (vertices[2][Y] < vertices[1][Y]) {
 		SwapCoord(vertices[2], vertices[1]);
+		SwapCoord(normals[2], normals[1]);
 	}
 	//Determine L/R relationship
 	if (vertices[0][Y] == vertices[1][Y]) {
 		if (vertices[0][X] > vertices[1][X]) {
 			SwapCoord(vertices[0], vertices[1]);
+			SwapCoord(normals[0], normals[1]);
 		}
 	}
 	else if (vertices[1][Y] == vertices[2][Y]) {
 		if (vertices[1][X] < vertices[2][X]) {
 			SwapCoord(vertices[1], vertices[2]);
+			SwapCoord(normals[1], normals[2]);
 		}
 	}
 	else if ((vertices[0][X] - vertices[2][X])*(vertices[1][Y] - vertices[2][Y]) / (vertices[0][Y] - vertices[2][Y]) + vertices[2][X] > vertices[1][X]) {
 		SwapCoord(vertices[1], vertices[2]);
+		SwapCoord(normals[1], normals[2]);
 	}
 }
 
@@ -715,11 +722,11 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals) {
 			float E12 = EdgeSide(vertices[1], vertices[2], i, j, E12Right);
 			float E20 = EdgeSide(vertices[2], vertices[0], i, j, E20Right);
 			
-			float triA = GzTriangleArea(vertices[0], vertices[1], vertices[2]);
+			float triA = triangleArea(vertices[0], vertices[1], vertices[2]);
 			if (E01 > 0 && E12 > 0 && E20 > 0 || E01 < 0 && E12 < 0 && E20 < 0) {
 				float pointZ = (-A * i - B * j - D) / C;
 				GzGetDisplay(render->display, i, j, &red, &green, &blue, &alpha, &fbZ);
-				//Hw4: ByLinear
+
 				GzCoord p = { i, j, 1 };
 				if (pointZ > 0 && pointZ < fbZ) {
 					if (render->interp_mode == GZ_FLAT) {
@@ -730,44 +737,42 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals) {
 					}
 					else if (render->interp_mode == GZ_COLOR) {
 						GzColor colorV0, colorV1, colorV2;
-						GzShadingEquation(render, colorV0, normals[0]);
-						GzShadingEquation(render, colorV1, normals[1]);
-						GzShadingEquation(render, colorV2, normals[2]);
+						CalculateColor(render, colorV0, normals[0]);
+						CalculateColor(render, colorV1, normals[1]);
+						CalculateColor(render, colorV2, normals[2]);
 						// Barycentric Interpolation
 						// areas of each inner tris
-						float A0 = GzTriangleArea(vertices[1], p, vertices[2]);
-						float A1 = GzTriangleArea(vertices[0], p, vertices[2]);
-						float A2 = GzTriangleArea(vertices[0], p, vertices[1]);
+						float A0 = triangleArea(vertices[1], p, vertices[2]);
+						float A1 = triangleArea(vertices[0], p, vertices[2]);
+						float A2 = triangleArea(vertices[0], p, vertices[1]);
 
 						// interpolate color
-						float rf = (A0*colorV0[0] + A1*colorV1[0] + A2*colorV2[0]) / triA;
-						float gf = (A0*colorV0[1] + A1*colorV1[1] + A2*colorV2[1]) / triA;
-						float bf = (A0*colorV0[2] + A1*colorV1[2] + A2*colorV2[2]) / triA;
-						if (rf > 1.0) rf = 1.0;
-						if (gf > 1.0) gf = 1.0;
-						if (bf > 1.0) bf = 1.0;
-						red = (GzIntensity)ctoi(rf);
-						green = (GzIntensity)ctoi(gf);
-						blue = (GzIntensity)ctoi(bf);
+						float interp_r = (A0*colorV0[0] + A1*colorV1[0] + A2*colorV2[0]) / triA;
+						float interp_g = (A0*colorV0[1] + A1*colorV1[1] + A2*colorV2[1]) / triA;
+						float interp_b = (A0*colorV0[2] + A1*colorV1[2] + A2*colorV2[2]) / triA;
+						if (interp_r > 1.0) interp_r = 1.0;
+						if (interp_g > 1.0) interp_g = 1.0;
+						if (interp_b > 1.0) interp_b = 1.0;
+						red = (GzIntensity)ctoi(interp_r);
+						green = (GzIntensity)ctoi(interp_g);
+						blue = (GzIntensity)ctoi(interp_b);
 						fbZ = pointZ;
 					}
 					else if (render->interp_mode == GZ_NORMALS) {
-						// Barycentric Interpolation
-						// areas of inner tris
-						float A0 = GzTriangleArea(vertices[1], p, vertices[2]);
-						float A1 = GzTriangleArea(vertices[0], p, vertices[2]);
-						float A2 = GzTriangleArea(vertices[0], p, vertices[1]);
+						// byinterpolate
+						float A0 = triangleArea(vertices[1], p, vertices[2]);
+						float A1 = triangleArea(vertices[0], p, vertices[2]);
+						float A2 = triangleArea(vertices[0], p, vertices[1]);
 
-						// interpolate Normal of this point
-						GzCoord pN;
-						pN[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA;
-						pN[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA;
-						pN[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA;
-						normalized(pN);
+						GzCoord interp_N;
+						interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA;
+						interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA;
+						interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA;
+						normalized(interp_N);
 
 						// calculate color
 						GzColor color;
-						GzShadingEquation(render, color, pN);
+						CalculateColor(render, color, interp_N);
 
 						red = (GzIntensity)ctoi(color[0]);
 						green = (GzIntensity)ctoi(color[1]);
@@ -834,43 +839,38 @@ void ToScreen(const GzCoord* vert_world, GzMatrix Xsw, GzCoord* vert_screen)
 }
 
 void NormalToScreen(const GzCoord* normal_world, GzMatrix Xsw, GzCoord* normal_screen) {
-	/*float outVect[4][3];
-	float transVect[4][3];
+	float tempNorm[4][3];
+	float transNorm[4][3];
 
 	for (int i = 0; i < 3; i++){
-		transVect[0][i] = normal_world[i][0];
-		transVect[1][i] = normal_world[i][1];
-		transVect[2][i] = normal_world[i][2];
-		transVect[3][i] = 1;
+		transNorm[0][i] = normal_world[i][0];
+		transNorm[1][i] = normal_world[i][1];
+		transNorm[2][i] = normal_world[i][2];
+		transNorm[3][i] = 1;
 	}
 
 	for (int i = 0; i < 4; i++){
 		for (int j = 0; j < 3; j++){
-			outVect[i][j] = 0;
+			tempNorm[i][j] = 0;
 		}
 	}
 
 	for (int i = 0; i < 4; i++){
 		for (int j = 0; j < 3; j++){
 			for (int k = 0; k < 4; k++){
-				outVect[i][j] += Xsw[i][k] * transVect[k][j];
+				tempNorm[i][j] += Xsw[i][k] * transNorm[k][j];
 			}
 		}
 	}
 
 	for (int i = 0; i < 3; i++){
-		normal_screen[i][0] = outVect[0][i] / outVect[3][i];
-		normal_screen[i][1] = outVect[1][i] / outVect[3][i];
-		normal_screen[i][2] = outVect[2][i] / outVect[3][i];
-	}*/
+		normal_screen[i][0] = tempNorm[0][i] / tempNorm[3][i];
+		normal_screen[i][1] = tempNorm[1][i] / tempNorm[3][i];
+		normal_screen[i][2] = tempNorm[2][i] / tempNorm[3][i];
+	}
 
-	/*for (int i = 0; i < 3; i++){
+	for (int i = 0; i < 3; i++){
 		normalized(normal_screen[i]);
-	}*/
-	for (int j = 0; j < 3; ++j) {
-		normal_screen[j][X] = Xsw[0][0] * normal_world[j][X] + Xsw[0][1] * normal_world[j][Y] + Xsw[0][2] * normal_world[j][Z];
-		normal_screen[j][Y] = Xsw[1][0] * normal_world[j][X] + Xsw[1][1] * normal_world[j][Y] + Xsw[1][2] * normal_world[j][Z];
-		normal_screen[j][Z] = Xsw[2][0] * normal_world[j][X] + Xsw[2][1] * normal_world[j][Y] + Xsw[2][2] * normal_world[j][Z];
 	}
 }
 
@@ -887,7 +887,7 @@ int getColor(GzRender *render,GzColor color,GzCoord norm)
 }
 
 //Hw4:
-float GzTriangleArea(GzCoord v0, GzCoord v1, GzCoord v2) {
+float triangleArea(GzCoord v0, GzCoord v1, GzCoord v2) {
 	float a = .5 * (v0[X] * v1[Y] + v0[Y] * v2[X] + v1[X] * v2[Y] - v1[Y] * v2[X] - v0[Y] * v1[X] - v0[X] * v2[Y]);
 	if (a < 0) return -a;
 	else return a;
@@ -898,108 +898,96 @@ float dotProduct(GzCoord v1, GzCoord v2) {
 	return v1[X] * v2[X] + v1[Y] * v2[Y] + v1[Z] * v2[Z];
 }
 
-int GzShadingEquation(GzRender *render, GzColor color, GzCoord norm) {
-	// computer color at each vertex
+int CalculateColor(GzRender *render, GzColor color, GzCoord norm) {
 	normalized(norm);
-	// E should just be camera lookat reversed? Actually no goddamn it
-	GzCoord E;
-	E[X] = 0;
-	E[Y] = 0;
-	E[Z] = -1;
-	normalized(E);
-	// calculate Rs for each point
-	GzCoord* R = new GzCoord[render->numlights];
-	// vertex 0
-	float NdotL;
-	int* liteCases = new int[render->numlights];
-	// check N dot L and N dot E
-	// if both positive fine liteCases[i] = 1;
-	// if both negative flip normal, liteCases[i] = -1;
-	// if different signs, skip, liteCases = 0;
 
-	float NdotE = dotProduct(norm, E);
-	for (int i = 0; i < render->numlights; ++i) {
+	GzCoord* reflect = (GzCoord*)malloc(sizeof(GzCoord) * render->numlights);
+	float NdotL;
+	int* checkLights = (int*)malloc(sizeof(int)*render->numlights);
+
+	GzCoord eye;
+	eye[X] = 0;
+	eye[Y] = 0;
+	eye[Z] = -1;
+	normalized(eye);
+
+	float NdotE = dotProduct(norm, eye);
+	for (int i = 0; i < render->numlights; i++) {
 		NdotL = dotProduct(norm, render->lights[i].direction);
 		if (NdotL >= 0 && NdotE >= 0) {
-			liteCases[i] = 1;
-			R[i][X] = 2 * NdotL*norm[X] - render->lights[i].direction[X];
-			R[i][Y] = 2 * NdotL*norm[Y] - render->lights[i].direction[Y];
-			R[i][Z] = 2 * NdotL*norm[Z] - render->lights[i].direction[Z];
-			normalized(R[i]);
+			checkLights[i] = 1;
+			reflect[i][X] = 2 * NdotL*norm[X] - render->lights[i].direction[X];
+			reflect[i][Y] = 2 * NdotL*norm[Y] - render->lights[i].direction[Y];
+			reflect[i][Z] = 2 * NdotL*norm[Z] - render->lights[i].direction[Z];
+			normalized(reflect[i]);
 		}
 		else if (NdotL < 0 && NdotE < 0) {
-			liteCases[i] = -1;
-			R[i][X] = 2 * NdotL*(-norm[X]) - render->lights[i].direction[X];
-			R[i][Y] = 2 * NdotL*(-norm[Y]) - render->lights[i].direction[Y];
-			R[i][Z] = 2 * NdotL*(-norm[Z]) - render->lights[i].direction[Z];
-			normalized(R[i]);
+			checkLights[i] = -1;
+			reflect[i][X] = 2 * NdotL*(-norm[X]) - render->lights[i].direction[X];
+			reflect[i][Y] = 2 * NdotL*(-norm[Y]) - render->lights[i].direction[Y];
+			reflect[i][Z] = 2 * NdotL*(-norm[Z]) - render->lights[i].direction[Z];
+			normalized(reflect[i]);
 		}
 		else {
-			liteCases[i] = 0;
+			checkLights[i] = 0;
 			continue;
 		}
 	}
-	// check N dot L and N dot E, if both positi
 
+	GzColor ambientIntensity;
+	ambientIntensity[0] = render->Ka[0] * render->ambientlight.color[0];
+	ambientIntensity[1] = render->Ka[1] * render->ambientlight.color[1]; // G
+	ambientIntensity[2] = render->Ka[2] * render->ambientlight.color[2]; // B
 
-	// sum all lights for Specular
-	// Ks * sigma (le * (R dot E)^s) 
-	GzColor specLightSum = { 0, 0, 0 };
+	GzColor diffuseSum = { 0, 0, 0 };
 	for (int i = 0; i < render->numlights; ++i) {
-		if (liteCases[i] == 0) continue;
-		float RdotE = dotProduct(R[i], E);
+		if (checkLights[i] == 0) continue;
+		if (checkLights[i] == 1) {
+			// R
+			diffuseSum[0] += render->lights[i].color[0] * dotProduct(norm, render->lights[i].direction);
+			// G
+			diffuseSum[1] += render->lights[i].color[1] * dotProduct(norm, render->lights[i].direction);
+			// B
+			diffuseSum[2] += render->lights[i].color[2] * dotProduct(norm, render->lights[i].direction);
+		}
+		else if (checkLights[i] == -1) {
+			GzCoord negN = { -norm[X], -norm[Y], -norm[Z] };
+			// R
+			diffuseSum[0] += render->lights[i].color[0] * dotProduct(negN, render->lights[i].direction);
+			// G
+			diffuseSum[1] += render->lights[i].color[1] * dotProduct(negN, render->lights[i].direction);
+			// B
+			diffuseSum[2] += render->lights[i].color[2] * dotProduct(negN, render->lights[i].direction);
+		}
+	}
+	GzColor diffuseIntensity;
+	diffuseIntensity[0] = render->Kd[0] * diffuseSum[0]; // R
+	diffuseIntensity[1] = render->Kd[1] * diffuseSum[1]; // G
+	diffuseIntensity[2] = render->Kd[2] * diffuseSum[2]; // B
+ 
+	GzColor specularSum = { 0, 0, 0 };
+	for (int i = 0; i < render->numlights; ++i) {
+		if (checkLights[i] == 0) continue;
+		float RdotE = dotProduct(reflect[i], eye);
 		if (RdotE < 0) RdotE = 0;
 		if (RdotE > 1) RdotE = 1;
 		// R
-		specLightSum[0] += render->lights[i].color[0] * pow(RdotE, render->spec);
+		specularSum[0] += render->lights[i].color[0] * pow(RdotE, render->spec);
 		// G
-		specLightSum[1] += render->lights[i].color[1] * pow(RdotE, render->spec);
+		specularSum[1] += render->lights[i].color[1] * pow(RdotE, render->spec);
 		// B
-		specLightSum[2] += render->lights[i].color[2] * pow(RdotE, render->spec);
+		specularSum[2] += render->lights[i].color[2] * pow(RdotE, render->spec);
 	}
-	GzColor specComp;
-	specComp[0] = render->Ks[0] * specLightSum[0]; // R
-	specComp[1] = render->Ks[1] * specLightSum[1]; // G
-	specComp[2] = render->Ks[2] * specLightSum[2]; // B
-
-	// sum all lights for Diffuse
-	// Kd * sigma (le * N dot L)
+	GzColor specularIntensity;
+	specularIntensity[0] = render->Ks[0] * specularSum[0]; // R
+	specularIntensity[1] = render->Ks[1] * specularSum[1]; // G
+	specularIntensity[2] = render->Ks[2] * specularSum[2]; // B
 	
-	GzColor diffLightSum = { 0, 0, 0 };
-	for (int i = 0; i < render->numlights; ++i) {
-		if (liteCases[i] == 0) continue;
-		if (liteCases[i] == 1) {
-			// R
-			diffLightSum[0] += render->lights[i].color[0] * dotProduct(norm, render->lights[i].direction);
-			// G
-			diffLightSum[1] += render->lights[i].color[1] * dotProduct(norm, render->lights[i].direction);
-			// B
-			diffLightSum[2] += render->lights[i].color[2] * dotProduct(norm, render->lights[i].direction);
-		}
-		else if (liteCases[i] == -1) {
-			GzCoord negN = { -norm[X], -norm[Y], -norm[Z] };
-			// R
-			diffLightSum[0] += render->lights[i].color[0] * dotProduct(negN, render->lights[i].direction);
-			// G
-			diffLightSum[1] += render->lights[i].color[1] * dotProduct(negN, render->lights[i].direction);
-			// B
-			diffLightSum[2] += render->lights[i].color[2] * dotProduct(negN, render->lights[i].direction);
-		}
-	}
-	GzColor diffComp;
-	diffComp[0] = render->Kd[0] * diffLightSum[0]; // R
-	diffComp[1] = render->Kd[1] * diffLightSum[1]; // G
-	diffComp[2] = render->Kd[2] * diffLightSum[2]; // B
+	
 
-												   // Ambient Component
-	GzColor ambComp;
-	ambComp[0] = render->Ka[0] * render->ambientlight.color[0]; // R
-	ambComp[1] = render->Ka[1] * render->ambientlight.color[1]; // G
-	ambComp[2] = render->Ka[2] * render->ambientlight.color[2]; // B
-
-	color[0] = specComp[0] + diffComp[0] + ambComp[0]; // R
-	color[1] = specComp[1] + diffComp[1] + ambComp[1]; // G
-	color[2] = specComp[2] + diffComp[2] + ambComp[2]; // B
+	color[0] = specularIntensity[0] + diffuseIntensity[0] + ambientIntensity[0];
+	color[1] = specularIntensity[1] + diffuseIntensity[1] + ambientIntensity[1];
+	color[2] = specularIntensity[2] + diffuseIntensity[2] + ambientIntensity[2];
 
 	return GZ_SUCCESS;
 }
