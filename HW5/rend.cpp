@@ -443,6 +443,7 @@ int GzPutTriangle(GzRender	*render, int numParts, GzToken *nameList, GzPointer *
 	GzCoord* vertices_screen;
 	GzCoord* vertices_normal;
 	GzTextureIndex* uv_coord;
+	GzCoord* vertices_model;
 	vertices_screen = (GzCoord*)malloc(sizeof(GzCoord) * 3);
 	vertices_normal = (GzCoord*)malloc(sizeof(GzCoord) * 3);
 	uv_coord = (GzTextureIndex*)malloc(sizeof(GzTextureIndex) * 2);
@@ -451,7 +452,7 @@ int GzPutTriangle(GzRender	*render, int numParts, GzToken *nameList, GzPointer *
 			continue;
 		}
 		if (nameList[i] == GZ_POSITION) {
-			GzCoord* vertices_model = (GzCoord*)valueList[i];
+			vertices_model = (GzCoord*)valueList[i];
 			ToScreen(vertices_model, render->Ximage[render->matlevel - 1], vertices_screen);
 		}
 		//HW4: get normals
@@ -539,7 +540,7 @@ int setupXpi(GzRender *render)
 	render->camera.Xpi[2][0] = 0;
 	render->camera.Xpi[2][1] = 0;
 	//ToDo Check
-	render->camera.Xpi[2][2] = tan(rad);
+	render->camera.Xpi[2][2] = 1;
 	render->camera.Xpi[2][3] = 0;
 
 	render->camera.Xpi[3][0] = 0;
@@ -750,8 +751,24 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 				float A1 = triangleArea(vertices[0], p, vertices[2]);
 				float A2 = triangleArea(vertices[0], p, vertices[1]);
 
+				float x0 = vertices[0][0];
+				float x1 = vertices[1][0];
+				float x2 = vertices[2][0];
+				float y0 = vertices[0][1];
+				float y1 = vertices[1][1];
+				float y2 = vertices[2][1];
+				float z0 = vertices[0][2];
+				float z1 = vertices[1][2];
+				float z2 = vertices[2][2];
+
+				float div = ((y1 - y2)*(x0 - x2) + (x2 - x1)*(y0 - y2)); // calculating the denominator in order to use for the calculation of coefficients, alpha,beta,gamma.
+				float coeff1 = ((y1 - y2)*(i - x2) + (x2 - x1)*(j - y2)) / div;
+				float coeff2 = ((y2 - y0)*(i - x2) + (x0 - x2)*(j - y2)) / div;
+				float c_val = 1 - coeff1 - coeff2;
+
 				float triA = triangleArea(vertices[0], vertices[1], vertices[2]);
 				float pointZ = (A0 * vertices[0][Z] + A1 * vertices[1][Z] + A2*vertices[2][Z]) / triA;
+				//float pointZ = z0 * coeff1 + z1 * coeff2 + z2 * c_val;
 
 				GzGetDisplay(render->display, i, j, &red, &green, &blue, &alpha, &fbZ);
 				
@@ -768,15 +785,36 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 						CalculateColorTexture(render, colorV0, normals[0]);
 						CalculateColorTexture(render, colorV1, normals[1]);
 						CalculateColorTexture(render, colorV2, normals[2]);
-						
+
 						// HW5
 						// Interpolate UV
 						GzTextureIndex UV;
 						UV[0] = (A0*uvs[0][0] + A1*uvs[1][0] + A2*uvs[2][0]) / triA;
 						UV[1] = (A0*uvs[0][1] + A1*uvs[1][1] + A2*uvs[2][1]) / triA;
 
+						//UV[0] = (uvs[0][0] + uvs[1][0] + uvs[2][0]) / 3;
+						//UV[1] = (uvs[0][1] + uvs[1][1] + uvs[2][1]) / 3;
+
+						//float atPointz0 = z0 / (INT_MAX - z0);	// Warping as per z0
+						//float atPointz1 = z1 / (INT_MAX - z1);	// Warping as per z1
+						//float atPointz2 = z2 / (INT_MAX - z2);	// Warping as per z2
+						//float atPointzz = pointZ / (INT_MAX - pointZ);
+
+						//float u0 = uvs[0][0] / (atPointz0 + 1);
+						//float u1 = uvs[1][0] / (atPointz1 + 1);
+						//float u2 = uvs[2][0] / (atPointz2 + 1);
+
+						//float v0 = uvs[0][1] / (atPointz0 + 1);
+						//float v1 = uvs[1][1] / (atPointz1 + 1);
+						//float v2 = uvs[2][1] / (atPointz2 + 1);
+
+
+						//UV[0] = coeff1 * u0 + coeff2 * u1 + c_val * u2;
+						//UV[1] = coeff1 * v0 + coeff2 * v1 + c_val * v2;
+
 						GzTextureIndex uv;
 						float vz = pointZ / (INT_MAX - pointZ);
+
 						uv[0] = UV[0] * (vz + 1);
 						uv[1] = UV[1] * (vz + 1);
 
