@@ -19,7 +19,7 @@ static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
 
-#define INFILE  "pot4.asc"
+#define INFILE  "ppot.asc"
 #define OUTFILE "output_antialiased.ppm"
 
 #define AAKERNEL_SIZE 6
@@ -28,6 +28,7 @@ float AAFilter[AAKERNEL_SIZE][3] =/* each sample is defined by Xshift, Yshift, w
 
 extern int tex_fun(float u, float v, GzColor color); /* image texture function */
 extern int ptex_fun(float u, float v, GzColor color); /* procedural texture function */
+extern int normal_fun(float u, float v, GzCoord normal);/*normal map*/
 
 void shade(GzCoord norm, GzCoord color);
 
@@ -37,7 +38,6 @@ void shade(GzCoord norm, GzCoord color);
 
 Application5::Application5()
 {
-
 }
 
 Application5::~Application5()
@@ -59,7 +59,6 @@ int Application5::Initialize()
 	int		status;
 
 	status = 0;
-
 	/*
 	 * Allocate memory for user input
 	 */
@@ -68,8 +67,8 @@ int Application5::Initialize()
 	/*
 	 * initialize the display and the renderer
 	 */
-	m_nWidth = 256;		// frame buffer and display width
-	m_nHeight = 256;    // frame buffer and display height
+	m_nWidth = 512;		// frame buffer and display width
+	m_nHeight = 512;    // frame buffer and display height
 
 	status |= GzNewFrameBuffer(&m_pFrameBuffer, m_nWidth, m_nHeight);
 
@@ -177,7 +176,7 @@ int Application5::Initialize()
 		* Select either GZ_COLOR or GZ_NORMALS as interpolation mode
 		*/
 		nameListShader[1] = GZ_INTERPOLATE;
-		interpStyle = GZ_COLOR;         /* Phong shading */
+		interpStyle = GZ_NORMALS;         /* Phong shading */
 		valueListShader[1] = (GzPointer)&interpStyle;
 
 		nameListShader[2] = GZ_AMBIENT_COEFFICIENT;
@@ -189,7 +188,8 @@ int Application5::Initialize()
 		valueListShader[4] = (GzPointer)&specpower;
 
 		nameListShader[5] = GZ_TEXTURE_MAP;
-#if 1   /* set up null texture function or valid pointer */
+
+#if 0   /* set up null texture function or valid pointer */
 		valueListShader[5] = (GzPointer)0;
 #else
 		valueListShader[5] = (GzPointer)(tex_fun);	/* or use ptex_fun */
@@ -200,7 +200,10 @@ int Application5::Initialize()
 		nameListShader[7] = GZ_AASHIFTY;
 		valueListShader[7] = (GzPointer)&(AAFilter[i][Y]);
 
-		status |= GzPutAttribute(m_pRender[i], 8, nameListShader, valueListShader);
+		nameListShader[8] = GZ_NORMAL_MAP;
+		valueListShader[8] = (GzPointer)(normal_fun);
+
+		status |= GzPutAttribute(m_pRender[i], 9, nameListShader, valueListShader);
 
 		status |= GzPushMatrix(m_pRender[i], scale);
 		status |= GzPushMatrix(m_pRender[i], rotateY);

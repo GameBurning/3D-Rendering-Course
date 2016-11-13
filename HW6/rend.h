@@ -35,6 +35,7 @@ typedef struct {			/* define a renderer */
   GzTexture		tex_fun;    /* tex_fun(float u, float v, GzColor color) */
   float			shiftX;
   float			shiftY;
+  GzNormalMap	normalmap_fun;
 }  GzRender;
 #endif
 

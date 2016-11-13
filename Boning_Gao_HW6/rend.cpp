@@ -808,34 +808,11 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 						UV[0] = (A0*uvs[0][0] + A1*uvs[1][0] + A2*uvs[2][0]) / triA;
 						UV[1] = (A0*uvs[0][1] + A1*uvs[1][1] + A2*uvs[2][1]) / triA;
 
-						//UV[0] = (uvs[0][0] + uvs[1][0] + uvs[2][0]) / 3;
-						//UV[1] = (uvs[0][1] + uvs[1][1] + uvs[2][1]) / 3;
-
-						//float atPointz0 = z0 / (INT_MAX - z0);	// Warping as per z0
-						//float atPointz1 = z1 / (INT_MAX - z1);	// Warping as per z1
-						//float atPointz2 = z2 / (INT_MAX - z2);	// Warping as per z2
-						//float atPointzz = pointZ / (INT_MAX - pointZ);
-
-						//float u0 = uvs[0][0] / (atPointz0 + 1);
-						//float u1 = uvs[1][0] / (atPointz1 + 1);
-						//float u2 = uvs[2][0] / (atPointz2 + 1);
-
-						//float v0 = uvs[0][1] / (atPointz0 + 1);
-						//float v1 = uvs[1][1] / (atPointz1 + 1);
-						//float v2 = uvs[2][1] / (atPointz2 + 1);
-
-
-						//UV[0] = coeff1 * u0 + coeff2 * u1 + c_val * u2;
-						//UV[1] = coeff1 * v0 + coeff2 * v1 + c_val * v2;
-
 						GzTextureIndex uv;
 						float vz = pointZ / (INT_MAX - pointZ);
 
 						uv[0] = UV[0] * (vz + 1);
 						uv[1] = UV[1] * (vz + 1);
-
-						//uv[0] = UV[0];
-						//uv[1] = UV[1];
 
 						// Get Texture Color
 						GzColor textureColor;

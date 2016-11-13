@@ -195,6 +195,7 @@ int GzNewRender(GzRender **render, GzDisplay *display)
 	//HW5
 	//init texture function
 	(*render)->tex_fun = NULL;
+	(*render)->normalmap_fun = NULL;
 
 	(*render)->shiftX = (*render)->shiftY = 0;
 
@@ -436,6 +437,11 @@ int GzPutAttribute(GzRender	*render, int numAttributes, GzToken	*nameList, GzPoi
 		{
 			float *y_shift = (float*)(valueList[i]);
 			render->shiftY = *y_shift;
+		}
+		else if (nameList[i] == GZ_NORMAL_MAP)
+		{
+			GzNormalMap normalmapfunction = (GzNormalMap)(valueList[i]);
+			render->normalmap_fun = normalmapfunction;
 		}
 	}
 	return GZ_SUCCESS;
@@ -868,12 +874,6 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 						float A1 = triangleArea(vertices[0], p, vertices[2]);
 						float A2 = triangleArea(vertices[0], p, vertices[1]);
 
-						GzCoord interp_N;
-						interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA;
-						interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA;
-						interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA;
-						normalized(interp_N);
-
 						// HW5
 						// Interpolate UV
 						GzTextureIndex UV;
@@ -884,6 +884,22 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 						float uv_z = pointZ / (INT_MAX - pointZ);
 						uv[0] = UV[0] * (uv_z + 1);
 						uv[1] = UV[1] * (uv_z + 1);
+
+						GzCoord normalMap;
+						if (render->normalmap_fun != NULL) {
+							render->normalmap_fun(uv[0], uv[1], normalMap);
+						}
+
+						GzCoord interp_N;
+						//interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA;
+						//interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA;
+						//interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA;
+
+						interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA + normalMap[RED];
+						interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA + normalMap[GREEN];
+						interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA + normalMap[BLUE];
+						normalized(interp_N);
+
 						//uv[0] = UV[0];
 						//uv[1] = UV[1];
 
