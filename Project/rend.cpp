@@ -5,6 +5,109 @@
 #include	"math.h"
 #include	"Gz.h"
 #include	"rend.h"
+
+extern float height_fun(float u, float v, float normal);/*normal map*/
+
+void SetUpTangent(GzRender *render, GzCoord FragPos)
+{
+	GzCoord ViewPos;
+	ViewPos[X] = 0;
+	ViewPos[Y] = 0;
+	ViewPos[Z] = -1;
+
+	GzCoord tangentViewPos, tangentFragPos, tangentViewDir;
+	tangentViewPos[X] = render->TBN[0][X] * ViewPos[X] + render->TBN[0][Y] * ViewPos[Y] + render->TBN[0][Z] * ViewPos[Z];
+	tangentViewPos[Y] = render->TBN[1][X] * ViewPos[X] + render->TBN[1][Y] * ViewPos[Y] + render->TBN[1][Z] * ViewPos[Z];
+	tangentViewPos[Z] = render->TBN[2][X] * ViewPos[X] + render->TBN[2][Y] * ViewPos[Y] + render->TBN[2][Z] * ViewPos[Z];
+
+	normalized(tangentViewPos);
+
+	tangentFragPos[X] = render->TBN[0][X] * FragPos[X] + render->TBN[0][Y] * FragPos[Y] + render->TBN[0][Z] * FragPos[Z];
+	tangentFragPos[Y] = render->TBN[1][X] * FragPos[X] + render->TBN[1][Y] * FragPos[Y] + render->TBN[1][Z] * FragPos[Z];
+	tangentFragPos[Z] = render->TBN[2][X] * FragPos[X] + render->TBN[2][Y] * FragPos[Y] + render->TBN[2][Z] * FragPos[Z];
+
+	normalized(tangentFragPos);
+
+	render->viewDir[X] = tangentViewPos[X] - tangentFragPos[X];
+	render->viewDir[Y] = tangentViewPos[Y] - tangentFragPos[Y];
+	render->viewDir[Z] = tangentViewPos[Z] - tangentFragPos[Z];
+	normalized(render->viewDir);
+
+}
+void ParallaxMapping(GzRender *render, GzTextureIndex uv)
+{
+	float height = 0;
+	/*GzColor heightmap;
+	height_fun(uv[0], uv[1], heightmap);
+	height = heightmap[RED];*/
+	height = height_fun(uv[0], uv[1], height);
+
+	float offset[2];
+	float height_scale = -0.05;
+	offset[0] = (render->viewDir[X]/2)*height * height_scale;
+	offset[1] = (render->viewDir[Y]/2)*height * height_scale;
+	
+	uv[0] = uv[0] - offset[0];
+	uv[1] = uv[1] - offset[1];
+
+}
+
+void CalculateTBN(GzRender *render, GzCoord* vertices, GzTextureIndex* uvs) {
+	float e1[3], e2[3];
+	float normal[3];
+	float deltauv1[2], deltauv2[2];
+
+	e1[X] = vertices[0][X] - vertices[1][X];
+	e1[Y] = vertices[0][Y] - vertices[1][Y];
+	e1[Z] = vertices[0][Z] - vertices[1][Z];
+
+	e2[X] = vertices[1][X] - vertices[2][X];
+	e2[Y] = vertices[1][Y] - vertices[2][Y];
+	e2[Z] = vertices[1][Z] - vertices[2][Z];
+
+	normal[X] = e1[Y] * e2[Z] - e1[Z] * e2[Y];
+	normal[Y] = e1[X] * e2[Z] - e1[Z] * e2[X];
+	normal[Z] = e1[X] * e2[Y] - e1[Y] * e2[X];
+
+	normalized(normal);
+
+	deltauv1[X] = uvs[0][X] - uvs[1][X];
+	deltauv1[Y] = uvs[0][Y] - uvs[1][Y];
+
+	deltauv2[X] = uvs[1][X] - uvs[2][X];
+	deltauv2[Y] = uvs[1][Y] - uvs[2][Y];
+
+	float f = 1.0 / (deltauv1[X] * deltauv2[Y] - deltauv2[X] * deltauv1[Y]);
+
+	float tangent[3], bitangent[3];
+	tangent[X] = f*(deltauv2[Y] * e1[X] - deltauv1[Y] * e2[X]);
+	tangent[Y] = f*(deltauv2[Y] * e1[Y] - deltauv1[Y] * e2[Y]);
+	tangent[Z] = f*(deltauv2[Y] * e1[Z] - deltauv1[Y] * e2[Z]);
+	normalized(tangent);
+
+	bitangent[X] = f*(-deltauv2[X] * e1[X] + deltauv1[X] * e2[X]);
+	bitangent[Y] = f*(-deltauv2[X] * e1[Y] + deltauv1[X] * e2[Y]);
+	bitangent[Z] = f*(-deltauv2[X] * e1[Z] + deltauv1[X] * e2[Z]);
+	normalized(bitangent);
+
+	render->TBN[0][0] = tangent[X];
+	render->TBN[0][1] = tangent[Y];
+	render->TBN[0][2] = tangent[Z];
+	render->TBN[0][3] = 0;
+	render->TBN[1][0] = bitangent[X];
+	render->TBN[1][1] = bitangent[Y];
+	render->TBN[1][2] = bitangent[Z];
+	render->TBN[1][3] = 0;
+	render->TBN[2][0] = normal[X];
+	render->TBN[2][1] = normal[Y];
+	render->TBN[2][2] = normal[Z];
+	render->TBN[2][3] = 0;
+	render->TBN[3][0] = 0;
+	render->TBN[3][1] = 0;
+	render->TBN[3][2] = 0;
+	render->TBN[3][3] = 1;
+}
+
 int GzRotXMat(float degree, GzMatrix mat)
 {
 // Create rotate matrix : rotate along x axis
@@ -207,7 +310,8 @@ int GzFreeRender(GzRender *render)
 /* 
 -free all renderer resources
 */
-	free(render);
+	render->display = 0;
+	delete render;
 	return GZ_SUCCESS;
 }
 
@@ -510,6 +614,7 @@ int GzPutTriangle(GzRender	*render, int numParts, GzToken *nameList, GzPointer *
 
 	if (vertices_screen[0][Z] > 0 && vertices_screen[1][Z] > 0 && vertices_screen[2][Z] > 0 && inScreen) {
 		SetupTri(vertices_screen, vertices_normal, uv_coord);
+		CalculateTBN(render, vertices_screen, uv_coord);
 		LEE(render, vertices_screen, vertices_normal, uv_coord);
 	}
 
@@ -754,11 +859,11 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 	//GetZPlane(vertices, &A, &B, &C, &D);
 
 	for (int j = Up; j < Down; j++) {
-		if (j < 0 || j > render->display->xres) {
+		if (j < 0 || j >= render->display->xres) {
 			continue;
 		}
 		for (int i = Left; i < Right; i++) {
-			if (i < 0 || i > render->display->yres) {
+			if (i < 0 || i >= render->display->yres) {
 				continue;
 			}
 			float E01 = EdgeSide(vertices[0], vertices[1], i, j, E01Right);
@@ -890,18 +995,48 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 							render->normalmap_fun(uv[0], uv[1], normalMap);
 						}
 
-						GzCoord interp_N;
-						//interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA;
-						//interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA;
-						//interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA;
 
-						interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA + normalMap[RED];
-						interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA + normalMap[GREEN];
-						interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA + normalMap[BLUE];
+
+
+						GzCoord interp_N;
+						
+						interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA;
+						interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA;
+						interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA;
+						
+						
+						//interp_N[X] = (A0*normals[0][X] + A1*normals[1][X] + A2*normals[2][X]) / triA + normalMap[RED];
+						//interp_N[Y] = (A0*normals[0][Y] + A1*normals[1][Y] + A2*normals[2][Y]) / triA + normalMap[GREEN];
+						//interp_N[Z] = (A0*normals[0][Z] + A1*normals[1][Z] + A2*normals[2][Z]) / triA + normalMap[BLUE];
+						
+						float nx = normalMap[RED] * 2.0 - 1.0;
+						float ny = normalMap[GREEN] * 2.0 - 1.0;
+						float nz = normalMap[BLUE] * 2.0 - 1.0;
+
+						GzCoord rgb;
+						rgb[0] = nx;
+						rgb[1] = ny;
+						rgb[2] = nz;
+						normalized(rgb);
+
+#ifdef NORMAL_MAP
+						interp_N[X] = render->TBN[0][0] * rgb[0] + render->TBN[1][0] * rgb[1] + render->TBN[2][0] * rgb[2];
+						interp_N[Y] = render->TBN[0][1] * rgb[0] + render->TBN[1][1] * rgb[1] + render->TBN[2][1] * rgb[2];
+						interp_N[Z] = render->TBN[0][2] * rgb[0] + render->TBN[1][2] * rgb[1] + render->TBN[2][2] * rgb[2];
+#endif
+
 						normalized(interp_N);
 
 						//uv[0] = UV[0];
 						//uv[1] = UV[1];
+
+						/* Run Parallax Mapping */
+						
+						GzCoord tmp_coord = { i, j, pointZ };
+						SetUpTangent(render, tmp_coord);
+#ifdef PARALLAX_MAP				
+						ParallaxMapping(render, uv);
+#endif
 
 						// Get Texture Color
 						GzColor textureColor;
@@ -923,7 +1058,9 @@ void LEE(GzRender* render, GzCoord* vertices, GzCoord* normals, GzTextureIndex* 
 						if (color[0] > 1.0) color[0] = 1.0;
 						if (color[1] > 1.0) color[1] = 1.0;
 						if (color[2] > 1.0) color[2] = 1.0;
-
+						if (color[0] < 0.0) color[0] = 0;
+						if (color[1] < 0.0) color[1] = 0;
+						if (color[2] < 0.0) color[2] = 0;
 						red = (GzIntensity)ctoi(color[0]);
 						green = (GzIntensity)ctoi(color[1]);
 						blue = (GzIntensity)ctoi(color[2]);

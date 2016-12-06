@@ -19,17 +19,19 @@ static char THIS_FILE[] = __FILE__;
 #define new DEBUG_NEW
 #endif
 
-#define INFILE  "ppot.asc"
-#define OUTFILE "output_antialiased.ppm"
+#define INFILE  "pot4.asc"
+#define OUTFILE "output_para.ppm"
 
 #define AAKERNEL_SIZE 6
 float AAFilter[AAKERNEL_SIZE][3] =/* each sample is defined by Xshift, Yshift, weight*/
 { -0.52, 0.38, 0.128,   0.41, 0.56, 0.119,   0.27, 0.08, 0.294,   -0.17, -0.29, 0.249,   0.58, -0.55, 0.104,   -0.31, -0.71, 0.106};
-
+//extern int NormalMapCreater();
 extern int tex_fun(float u, float v, GzColor color); /* image texture function */
 extern int ptex_fun(float u, float v, GzColor color); /* procedural texture function */
-extern int normal_fun(float u, float v, GzCoord normal);/*normal map*/
-
+extern int normal_fun(float u, float v, GzColor normal);/*normal map*/
+extern int GzFreeHeightTexture(void);
+extern int GzFreeNormalTexture(void);
+extern int GzFreeMap();
 void shade(GzCoord norm, GzCoord color);
 
 //////////////////////////////////////////////////////////////////////
@@ -67,8 +69,8 @@ int Application5::Initialize()
 	/*
 	 * initialize the display and the renderer
 	 */
-	m_nWidth = 512;		// frame buffer and display width
-	m_nHeight = 512;    // frame buffer and display height
+	m_nWidth = 1024;		// frame buffer and display width
+	m_nHeight = 1024;    // frame buffer and display height
 
 	status |= GzNewFrameBuffer(&m_pFrameBuffer, m_nWidth, m_nHeight);
 
@@ -107,7 +109,7 @@ int Application5::Initialize()
 
 		GzMatrix	rotateY =
 		{
-			.866,	0.0,	-0.5,	0.0,
+			0.866,	0.0,	-0.5,	0.0,
 			0.0,	1.0,	0.0,	0.0,
 			0.5,	0.0,	.866,	0.0,
 			0.0,	0.0,	0.0,	1.0
@@ -116,15 +118,15 @@ int Application5::Initialize()
 
 
 #if 1 	/* set up app-defined camera if desired, else use camera defaults */
-		camera.position[X] = -3;
-		camera.position[Y] = -25;
-		camera.position[Z] = -4;
+		camera.position[X] = -10;
+		camera.position[Y] = 0;
+		camera.position[Z] = 0;
 
-		camera.lookat[X] = 7.8;
+		camera.lookat[X] = 0;
 		camera.lookat[Y] = 0.7;
 		camera.lookat[Z] = 6.5;
 
-		camera.worldup[X] = -0.2;
+		camera.worldup[X] = 0;
 		camera.worldup[Y] = 1.0;
 		camera.worldup[Z] = 0.0;
 
@@ -132,14 +134,14 @@ int Application5::Initialize()
 
 		status |= GzPutCamera(m_pRender[i], &camera);
 #endif 
-
+		//NormalMapCreater();
 		/* Start Renderer */
 		status |= GzBeginRender(m_pRender[i]);
 
 		/* Light */
-		GzLight	light1 = { {-0.7071, 0.7071, 0}, {0.5, 0.5, 0.9} };
-		GzLight	light2 = { {0, -0.7071, -0.7071}, {0.9, 0.2, 0.3} };
-		GzLight	light3 = { {0.7071, 0.0, -0.7071}, {0.2, 0.7, 0.3} };
+		GzLight	light1 = { {-0.7071, 0.7071, 0}, {0.5, 0.5, 0.5} };
+		GzLight	light2 = { {0, -0.7071, -0.7071}, {0.5, 0.5, 0.5} };
+		GzLight	light3 = { {0.7071, 0.0, -0.7071}, {0.5, 0.5, 0.5} };
 		GzLight	ambientlight = { {0, 0, 0}, {0.3, 0.3, 0.3} };
 
 		/* Material property */
@@ -203,11 +205,12 @@ int Application5::Initialize()
 		nameListShader[8] = GZ_NORMAL_MAP;
 		valueListShader[8] = (GzPointer)(normal_fun);
 
+
 		status |= GzPutAttribute(m_pRender[i], 9, nameListShader, valueListShader);
 
 		status |= GzPushMatrix(m_pRender[i], scale);
 		status |= GzPushMatrix(m_pRender[i], rotateY);
-		status |= GzPushMatrix(m_pRender[i], rotateX);
+		//status |= GzPushMatrix(m_pRender[i], rotateX);
 
 		if (status) exit(GZ_FAILURE);
 	}
@@ -347,6 +350,9 @@ int Application5::Clean()
 	delete m_pRender;
 	delete m_pDisplay;
 	status |= GzFreeTexture();
+	status |= GzFreeNormalTexture();
+	status |= GzFreeHeightTexture();
+	status |= GzFreeMap();
 
 	if (status)
 		return(GZ_FAILURE);

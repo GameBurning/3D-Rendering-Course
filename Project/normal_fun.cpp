@@ -5,6 +5,12 @@
 GzColor	*image_normal = NULL;
 int xs_normal, ys_normal;
 int reset_normal = 1;
+extern GzColor *normMap;
+extern int normXs, normYs;
+
+extern int NormalMapCreater();
+
+
 
 /* Image texture function */
 int normal_fun(float u, float v, GzColor normal)
@@ -16,7 +22,44 @@ int normal_fun(float u, float v, GzColor normal)
 	FILE			*fd;
 
 	if (reset_normal) {          /* open and load texture file */
-		fd = fopen("normal.ppm", "rb");
+
+		//fd = fopen("rock_n.ppm", "rb");
+		//if (fd == NULL) {
+		//	fprintf(stderr, "normal file not found\n");
+		//	exit(-1);
+		//}
+		//fscanf(fd, "%s %d %d %c", foo, &xs_normal, &ys_normal, &dummy);
+		//image_normal = (GzColor*)malloc(sizeof(GzColor)*(xs_normal + 1)*(ys_normal + 1));
+		//if (image_normal == NULL) {
+		//	fprintf(stderr, "malloc for texture image failed\n");
+		//	exit(-1);
+		//}
+
+		//for (i = 0; i < xs_normal*ys_normal; i++) {	/* create array of GzColor values */
+		//	fread(pixel, sizeof(pixel), 1, fd);
+		//	image_normal[i][RED] = (float)((int)pixel[RED]) * (1.0 / 255.0);
+		//	image_normal[i][GREEN] = (float)((int)pixel[GREEN]) * (1.0 / 255.0);
+		//	image_normal[i][BLUE] = (float)((int)pixel[BLUE]) * (1.0 / 255.0);
+		//}
+
+		//reset_normal = 0;          /* init is done */
+		//fclose(fd);
+
+
+		NormalMapCreater();
+		//image_normal = normMap;
+		xs_normal = normXs;
+		ys_normal = normYs;
+		image_normal = (GzColor*)malloc(sizeof(GzColor)*(xs_normal + 1)*(ys_normal + 1));
+		for (i = 0; i < xs_normal*ys_normal; i++) {	/* create array of GzColor values */
+			image_normal[i][RED] = (float)(normMap[i][RED]) * (1.0 / 255.0);
+			image_normal[i][GREEN] = (float)(normMap[i][GREEN]) * (1.0 / 255.0);
+			image_normal[i][BLUE] = (float)(normMap[i][BLUE]) * (1.0 / 255.0);
+		}
+		reset_normal = 0;
+
+#ifdef USEEXTERNNORMAL				
+		fd = fopen(NORMALMAPFILE, "rb");
 		if (fd == NULL) {
 			fprintf(stderr, "normal file not found\n");
 			exit(-1);
@@ -37,6 +80,7 @@ int normal_fun(float u, float v, GzColor normal)
 
 		reset_normal = 0;          /* init is done */
 		fclose(fd);
+#endif
 	}
 
 	/* bounds-test u,v to make sure nothing will overflow image array bounds */

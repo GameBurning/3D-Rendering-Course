@@ -36,6 +36,11 @@ typedef struct {			/* define a renderer */
   float			shiftX;
   float			shiftY;
   GzNormalMap	normalmap_fun;
+  GZHeightMap   heightmap_fun;
+  GzMatrix      TBN;
+  GzColor       tanViewPos;
+  GzColor       tanFragPos;
+  GzColor       viewDir;
 }  GzRender;
 #endif
 

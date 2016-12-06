@@ -2,6 +2,21 @@
  * Gz.h - include file for the cs580 rendering library
  */
 
+#define NORMAL_MAP
+//#define USEEXTERNNORMAL
+
+//#define PARALLAX_MAP
+//#define USEEXTERNHEIGHT
+
+//#define TEXTUREFILE  "196.ppm"
+//#define NORMALMAPFILE  "196_n.ppm"
+//#define HEIGHTMAPFILE	"196_h.ppm"
+
+#define TEXTUREFILE  "176.ppm"
+#define NORMALMAPFILE  "176_n.ppm"
+#define HEIGHTMAPFILE	"176_h.ppm"
+
+
 /*
  * universal constants
  */
@@ -36,6 +51,7 @@
 #define	GZ_TEXTURE_MAP			1010	/* pointer to texture routine */
 
 #define GZ_NORMAL_MAP			1011     /*pointer to normal map*/
+#define GZ_HEIGHT_MAP         1012     /*pointer to parallax map*/
 /*
  * flags fields for value list attributes
  */
@@ -57,6 +73,7 @@ typedef int	GzDepth;		/* z is signed for clipping */
 typedef	int	(*GzTexture)(float u, float v, GzColor color);	/* pointer to texture sampling method */
 /* u,v parameters [0,1] are defined tex_fun(float u, float v, GzColor color) */
 typedef int (*GzNormalMap)(float u, float v, GzCoord normal);
+typedef int(*GZHeightMap)(float u, float v, GzCoord color);
 
 /*
  * Gz camera definition
